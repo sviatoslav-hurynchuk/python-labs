@@ -1,0 +1,20 @@
+# Віртуальне середовище
+.venv/
+venv/
+env/
+
+# Кеш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Файли середовищ
+*.env
+
+# IDE / Editor
+.idea/
+.vscode/
+
+# Mac / Windows системні файли
+.DS_Store
+Thumbs.db
