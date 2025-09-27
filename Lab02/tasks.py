@@ -1,14 +1,12 @@
 import random
 import math
 
-# Завдання 1
 def task1():
     numbers = [random.randint(0, 100) for _ in range(10)]
     print("Вхідні числа:", numbers)
     first_half = [x for x in numbers if x <= 50]
     print("Числа <=50:", first_half)
 
-# Завдання 2
 def task2():
     total = float(input("Введіть суму покупки: "))
     discount = 0
@@ -19,7 +17,6 @@ def task2():
     final_price = total * (1 - discount)
     print(f"Сума до оплати з урахуванням знижки: {final_price:.2f} грн")
 
-# Завдання 4
 def task4():
     A = int(input("Введіть число A: "))
     B = int(input("Введіть число B (B > A): "))
@@ -28,7 +25,6 @@ def task4():
         total_sum += i
     print(f"Сума чисел від {A} до {B}:", total_sum)
 
-# Завдання 5
 def task5():
     A = int(input("Введіть число A: "))
     B = int(input("Введіть число B (B > A): "))
@@ -37,7 +33,6 @@ def task5():
         sum_squares += i**2
     print(f"Сума квадратів чисел від {A} до {B}:", sum_squares)
 
-# Завдання 8
 def task8():
     N = int(input("Введіть число N (>1): "))
     K = 0
@@ -45,7 +40,6 @@ def task8():
         K += 1
     print(f"Найменше K, для якого 5^K > N: {K}")
 
-# Завдання 9
 def task9():
     n = int(input("Введіть число n: "))
     i = 1
@@ -56,7 +50,6 @@ def task9():
             break
         i += 1
 
-# Завдання 10
 def task10():
     n = int(input("Введіть число n: "))
     i = 0
@@ -73,7 +66,6 @@ def task10():
             break
         i += 1
 
-# Завдання 11
 def task11():
     D = int(input("Введіть день: "))
     M = int(input("Введіть місяць: "))
@@ -104,7 +96,6 @@ def task11():
         zodiac = "Козеріг"
     print("Знак Зодіаку:", zodiac)
 
-# Завдання 12
 def task12():
     unit = int(input("Введіть номер одиниці маси (1-кілограм, 2-мілліграм, 3-грам, 4-тонна, 5-центнер): "))
     mass = float(input("Введіть масу тіла у цих одиницях: "))
@@ -121,7 +112,6 @@ def task12():
         kg = mass * 100
     print(f"Маса тіла в кілограмах: {kg:.6f} кг")
 
-# Приклад виклику функцій
 if __name__ == "__main__":
     task1()
     task2()
