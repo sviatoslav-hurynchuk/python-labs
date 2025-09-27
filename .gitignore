@@ -12,7 +12,7 @@ __pycache__/
 *.env
 
 # IDE / Editor
-.idea/
+Lab01/.idea/
 .vscode/
 
 # Mac / Windows системні файли
