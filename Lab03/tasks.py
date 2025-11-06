@@ -99,8 +99,8 @@ def task4():
         print("Текст не може бути порожнім!")
         return
 
-    words = re.findall(r'\w+|[^\w\s]', text, flags=re.UNICODE)
-    word_only = [w for w in words if re.match(r'\w+', w, flags=re.UNICODE)]
+    words = re.findall(r"\w+(?:[’']\w+)*|[^\w\s’']", text, flags=re.UNICODE)
+    word_only = [w for w in words if re.match(r"\w+(?:[’']\w+)*", w, flags=re.UNICODE)]
 
     if len(word_only) > 1000:
         print(f"Забагато слів! Максимум 1000, а введено {len(word_only)}.")
@@ -111,7 +111,7 @@ def task4():
 
     result_first_half = []
     for w in words[:midpoint]:
-        if re.match(r'\w+', w, flags=re.UNICODE):
+        if re.match(r"\w+(?:[’']\w+)*", w, flags=re.UNICODE):
             w = w.capitalize()
         result_first_half.append(w)
 
@@ -119,7 +119,7 @@ def task4():
 
     result_second_half = []
     for w in words[midpoint:]:
-        if re.match(r'\w+', w, flags=re.UNICODE):
+        if re.match(r"\w+(?:[’']\w+)*", w, flags=re.UNICODE):
             w = w.lower()
             result_second_half.append(w + '*')
         else:
@@ -127,13 +127,15 @@ def task4():
 
     result = result_first_half + result_second_half
     output_text = ''.join(
-        [(' ' + t if re.match(r'\w+', t, flags=re.UNICODE) or t == '|' else t) for t in result]
+        [(' ' + t if re.match(r"\w+(?:[’']\w+)*", t, flags=re.UNICODE) or t == '|' else t) for t in result]
     ).strip()
 
     print("-" * 60)
     print("Перетворений текст:")
     print(output_text)
     print("=" * 60)
+
+
 
 def task5():
     print("\n" + "=" * 60)
