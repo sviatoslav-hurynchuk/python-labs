@@ -3,161 +3,188 @@ import re
 import csv
 from datetime import datetime, date
 
-class Person:
-    def __init__(self, surname, first_name, birth_date, nickname=None):
-        regex_pattern = re.compile(r"^[A-Za-zА-Яа-яЇїІіЄєҐґ'-]+(?: [A-Za-zА-Яа-яЇїІіЄєҐґ'-]+)*$")
 
-        if not isinstance(surname, str) or not surname.strip() or not regex_pattern.fullmatch(surname):
-            raise ValueError("Поле 'surname' невалідне")
+class Person:
+    NAME_PATTERN = re.compile(r"^[A-Za-zА-Яа-яЇїІіЄєҐґ'-]+(?: [A-Za-zА-Яа-яЇїІіЄєҐґ'-]+)*$")
+    NICKNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+
+    def __init__(self, surname, first_name, birth_date, nickname=None):
+        self._validate_field(surname, "surname", Person.NAME_PATTERN)
         self.surname = surname.strip()
 
-        if not isinstance(first_name, str) or not first_name.strip() or not regex_pattern.fullmatch(first_name):
-            raise ValueError("Поле 'first_name' невалідне")
+        self._validate_field(first_name, "first_name", Person.NAME_PATTERN)
         self.first_name = first_name.strip()
 
-        if nickname is not None:
-            if not isinstance(nickname, str) or not nickname.strip() or not re.fullmatch(r"^[A-Za-z0-9_-]+$", nickname):
-                raise ValueError("Поле 'nickname' невалідне")
-            self.nickname = nickname.strip()
-        else:
-            self.nickname = None
+        self.nickname = self._validate_optional_field(nickname, Person.NICKNAME_PATTERN)
 
+        self.birth_date = self._parse_and_validate_date(birth_date)
+
+    @staticmethod
+    def _validate_field(value, field_name, pattern):
+        if not isinstance(value, str) or not value.strip() or not pattern.fullmatch(value):
+            raise ValueError(f"Поле '{field_name}' невалідне")
+
+    @staticmethod
+    def _validate_optional_field(value, pattern):
+        if value is None:
+            return None
+        if not isinstance(value, str) or not value.strip() or not pattern.fullmatch(value):
+            raise ValueError("Поле 'nickname' невалідне")
+        return value.strip()
+
+    def _parse_and_validate_date(self, birth_date):
         if isinstance(birth_date, str):
             if not birth_date.strip():
                 raise ValueError("Поле 'birth_date' невалідне: порожній рядок")
             try:
                 year, month, day = map(int, birth_date.split('-'))
-                birth_date_obj = date(year, month, day)  # <- тут виправлено
+                birth_date_obj = date(year, month, day)
             except ValueError:
                 raise ValueError("Поле 'birth_date' невалідне")
-        elif isinstance(birth_date, datetime):
-            birth_date_obj = birth_date.date()
-        elif isinstance(birth_date, date):
-            birth_date_obj = birth_date
+        elif isinstance(birth_date, (datetime, date)):
+            birth_date_obj = birth_date.date() if isinstance(birth_date, datetime) else birth_date
         else:
             raise ValueError("Поле 'birth_date' невалідне")
 
         if birth_date_obj > date.today():
             raise ValueError("Поле 'birth_date' невалідне: дата не може бути в майбутньому")
-
-        self.birth_date = birth_date_obj
+        return birth_date_obj
 
     def get_age(self):
         today = date.today()
         age = today.year - self.birth_date.year
         if (today.month, today.day) < (self.birth_date.month, self.birth_date.day):
             age -= 1
-
         return str(age)
 
     def get_fullname(self):
-        return "%s %s" % (self.surname, self.first_name)
+        return f"{self.surname} {self.first_name}"
 
 
-def modifier(filename):
-    if not os.path.exists(filename):
-        raise FileNotFoundError(f"Файл '{filename}' не знайдено")
-    
-    rows = []
-    with open(filename, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames
-        
-        if fieldnames is None:
-            raise ValueError("Файл не містить заголовків колонок")
-        
-        rows = list(reader)
-    
-    if not rows:
-        return
-    
-    persons = []
-    for row in rows:
-        surname = row.get('surname', row.get('Surname', ''))
-        first_name = row.get('first_name', row.get('firstname', row.get('name', row.get('Name', ''))))
-        birth_date = row.get('birth_date', row.get('birthdate', row.get('birth', '')))
-        nickname = row.get('nickname', row.get('Nickname', None))
-        
-        if not surname or not first_name or not birth_date:
-            print(f"Помилка: відсутні обов'язкові поля для рядка {row}")
-            persons.append(None)
-            continue
-        
-        try:
-            person = Person(surname, first_name, birth_date, nickname if nickname else None)
-            persons.append(person)
-        except ValueError as e:
-            print(f"Помилка створення об'єкта Person: {e}")
-            persons.append(None)
-            continue
-    
-    new_fieldnames = []
-    name_index = None
-    
-    for i, field in enumerate(fieldnames):
-        if field.lower() in ['name', 'first_name', 'firstname']:
-            name_index = i
-            break
-    
-    for i, field in enumerate(fieldnames):
-        new_fieldnames.append(field)
-        if i == name_index:
-            new_fieldnames.append('fullname')
-    
-    new_fieldnames.append('age')
-    
-    new_rows = []
-    for i, row in enumerate(rows):
-        person = persons[i] if i < len(persons) else None
-        new_row = dict(row)
-        
-        if person is not None:
-            if name_index is not None:
-                ordered_row = {}
-                for j, field in enumerate(fieldnames):
-                    ordered_row[field] = new_row[field]
-                    if j == name_index:
-                        ordered_row['fullname'] = person.get_fullname()
-                ordered_row['age'] = person.get_age()
-                new_rows.append(ordered_row)
-            else:
-                new_row['fullname'] = person.get_fullname()
-                new_row['age'] = person.get_age()
-                new_rows.append(new_row)
+class CSVProcessor:
+    FIELD_ALIASES = {
+        'surname': ['surname', 'Surname'],
+        'first_name': ['first_name', 'firstname', 'name', 'Name'],
+        'birth_date': ['birth_date', 'birthdate', 'birth'],
+        'nickname': ['nickname', 'Nickname']
+    }
+
+    NAME_FIELDS = {'name', 'first_name', 'firstname'}
+
+    @staticmethod
+    def read_csv(filename):
+        if not os.path.exists(filename):
+            raise FileNotFoundError(f"Файл '{filename}' не знайдено")
+
+        with open(filename, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            if reader.fieldnames is None:
+                raise ValueError("Файл не містить заголовків колонок")
+            return list(reader), reader.fieldnames
+
+    @staticmethod
+    def extract_person_data(row):
+        data = {}
+        for field, aliases in CSVProcessor.FIELD_ALIASES.items():
+            for alias in aliases:
+                if alias in row and row[alias].strip():
+                    data[field] = row[alias]
+                    break
+
+        valid = all(data.get(key) for key in ['surname', 'first_name', 'birth_date'])
+        return {'valid': valid, 'data': data}
+
+    @staticmethod
+    def create_persons(rows):
+        persons = []
+        for row in rows:
+            person_data = CSVProcessor.extract_person_data(row)
+            if not person_data['valid']:
+                print(f"Помилка: відсутні обов'язкові поля для рядка {row}")
+                persons.append(None)
+                continue
+            try:
+                person = Person(**person_data['data'])
+                persons.append(person)
+            except ValueError as e:
+                print(f"Помилка створення об'єкта Person: {e}")
+                persons.append(None)
+        return persons
+
+    @staticmethod
+    def find_name_column(fieldnames):
+        return next((i for i, field in enumerate(fieldnames)
+                     if field.lower() in CSVProcessor.NAME_FIELDS), None)
+
+    @staticmethod
+    def build_new_fieldnames(fieldnames, name_index):
+        new_fieldnames = fieldnames[:]
+        if name_index is not None:
+            new_fieldnames.insert(name_index + 1, 'fullname')
         else:
+            new_fieldnames.append('fullname')
+        new_fieldnames.append('age')
+        return new_fieldnames
+
+    @staticmethod
+    def process_row(row, person, fieldnames, name_index):
+        new_row = dict(row)
+
+        if person:
+            new_row['fullname'] = person.get_fullname()
+            new_row['age'] = person.get_age()
+
             if name_index is not None:
-                ordered_row = {}
-                for j, field in enumerate(fieldnames):
-                    ordered_row[field] = new_row[field]
-                    if j == name_index:
-                        ordered_row['fullname'] = ''
-                ordered_row['age'] = ''
-                new_rows.append(ordered_row)
-            else:
-                new_row['fullname'] = ''
-                new_row['age'] = ''
-                new_rows.append(new_row)
-    
-    with open(filename, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=new_fieldnames)
-        writer.writeheader()
-        writer.writerows(new_rows)
+                # Зберігаємо порядок полів
+                ordered_row = {field: new_row[field] for field in fieldnames}
+                ordered_row['fullname'] = new_row['fullname']
+                ordered_row['age'] = new_row['age']
+                return ordered_row
+        else:
+            new_row['fullname'] = ''
+            new_row['age'] = ''
+
+        return new_row
+
+    @staticmethod
+    def process_rows(rows, persons, fieldnames, name_index):
+        return [CSVProcessor.process_row(row, persons[i] if i < len(persons) else None,
+                                         fieldnames, name_index)
+                for i, row in enumerate(rows)]
+
+    @staticmethod
+    def write_csv(filename, fieldnames, rows):
+        with open(filename, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    @staticmethod
+    def process_file(filename):
+        rows, fieldnames = CSVProcessor.read_csv(filename)
+        if not rows:
+            return
+
+        persons = CSVProcessor.create_persons(rows)
+        name_index = CSVProcessor.find_name_column(fieldnames)
+        new_fieldnames = CSVProcessor.build_new_fieldnames(fieldnames, name_index)
+        new_rows = CSVProcessor.process_rows(rows, persons, fieldnames, name_index)
+        CSVProcessor.write_csv(filename, new_fieldnames, new_rows)
+
+
+def get_file_path():
+    return os.path.join(os.getcwd(), "data.csv")
 
 
 def task01():
     person = Person("Гуринчук", "Святослав", "2007-07-22", "lava")
+    print(person.get_fullname())
+    print(person.get_age())
 
-    if person:
-        print(person.get_fullname())
-        print(person.get_age())
-
-def current_work_path():
-    return os.getcwd()
-
-def file_path():
-    return os.path.join(current_work_path(), "data.csv")
 
 def task02():
-    modifier(file_path())
+    CSVProcessor.process_file(get_file_path())
 
-task02()
+
+if __name__ == "__main__":
+    task02()
